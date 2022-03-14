@@ -14,78 +14,95 @@ class Company(models.Model):
         return self.name
 
 
-class Platform(models.Model):
-    PLATFORMS = (
-        ('android', 'Android'), ('ios', 'iOS'), ('microsoft windows', 'Microsoft Windows'),
-        ('ps4', 'PS4'), ('ps5', 'PS5'), ('xbox one', 'Xbox One'),
-        ('xbox series X/S', 'Xbox Series X/S'), ('wii u', 'Wii U'),
-        ('nintendo 3ds', 'Nintendo 3DS'), ('nintendo switch', 'Nintendo Switch')
-    )
+# # Undecided yet about using platforms. If I do, Platform will be a class and have M2M rel. with Game
 
-    name = models.CharField(max_length=128, choices=PLATFORMS)
+# class Platform(models.Model):
+#     PLATFORMS = (
+#         ('android', 'Android'), ('ios', 'iOS'), ('microsoft windows', 'Microsoft Windows'),
+#         ('ps4', 'PS4'), ('ps5', 'PS5'), ('xbox one', 'Xbox One'),
+#         ('xbox series X/S', 'Xbox Series X/S'), ('wii u', 'Wii U'),
+#         ('nintendo 3ds', 'Nintendo 3DS'), ('nintendo switch', 'Nintendo Switch')
+#     )
+#
+#     name = models.CharField(max_length=128, choices=PLATFORMS)
+#
+#     class Meta:
+#         db_table = "platforms"
+#
+#     def __str__(self):
+#         return self.name
+#
 
-    class Meta:
-        db_table = "platforms"
+# # Genre is at this point a field of Game, may yet change it to a class.
 
-    def __str__(self):
-        return self.name
+# class Genre(models.Model):
+#     GENRES = (
+#         ('action', 'Action'), ('adventure', 'Adventure'), ('fighting', 'Fighting'),
+#         ('rpg', 'RPG'), ('racing', 'Racing'), ('shooter', 'Shooter'),
+#         ('simulation', 'Simulation'), ('sports', 'Sports'), ('other', 'Other')
+#     )
+#
+#     name = models.CharField(max_length=128, choices=GENRES)
+#
+#     class Meta:
+#         db_table = "genres"
+#
+#     def __str__(self):
+#         return self.name
+
+# # Series class is possibly useful for games that are connected to each other.
+# # I will have to look into having a foreign key that can have null value,
+# # since not all games belong to a series. Is it ok? Probably will be just fine and be used.
+
+# class Series(models.Model):
+#     name = models.CharField(max_length=128)
+#
+#     class Meta:
+#         db_table = "series"
+#
+#     def __str__(self):
+#         return self.name
 
 
-class Genre(models.Model):
+class Game(models.Model):
+
     GENRES = (
         ('action', 'Action'), ('adventure', 'Adventure'), ('fighting', 'Fighting'),
         ('rpg', 'RPG'), ('racing', 'Racing'), ('shooter', 'Shooter'),
         ('simulation', 'Simulation'), ('sports', 'Sports'), ('other', 'Other')
     )
 
-    name = models.CharField(max_length=128, choices=GENRES)
-
-    class Meta:
-        db_table = "genres"
-
-    def __str__(self):
-        return self.name
-
-
-class Series(models.Model):
-    name = models.CharField(max_length=128)
-
-    class Meta:
-        db_table = "series"
-
-    def __str__(self):
-        return self.name
-
-
-class Game(models.Model):
     name = models.CharField(max_length=128)
     picture_url = models.CharField(max_length=128)
-    genre = models.ForeignKey(Genre, on_delete=models.PROTECT, related_name='games')
+    genre = models.CharField(max_length=128, choices=GENRES)
+    # genre = models.ForeignKey(Genre, on_delete=models.PROTECT, related_name='games')
     developer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='game_developer')
     publisher = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='game_publisher')
-    platforms = models.ManyToManyField(Platform, on_delete=models.PROTECT, related_name='games',
-                                       through='GameVersion', null=True, blank=True)
-    ratings = models.ManyToManyField(User, on_delete=models.PROTECT, related_name='games', through='Rating')
-    threads = models.ManyToManyField(User, on_delete=models.PROTECT, related_name='games', through='Thread')
-    series = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
+    # platforms = models.ManyToManyField(Platform, on_delete=models.PROTECT, related_name='games',
+    #                                    through='GameVersion', null=True, blank=True)
+    ratings = models.ManyToManyField(User, related_name='games', through='Rating')
+    threads = models.ManyToManyField(User, related_name='games', through='Thread')
+    # series = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
     release_year = models.PositiveIntegerField(validators=[MinValue(1950), MaxValue(date.today().year + 1)])
 
     class Meta:
-        db_table = "titles"
+        db_table = "games"
 
     def __str__(self):
         return self.name
 
+# # GameVersion class will probably be created when I decide to use a platforms class and thus create
+# # M2M relationship between Game and Platform through this class. Undecided yet.
 
-class GameVersion(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.PROTECT, related_name='game_versions')
-    platform = models.ForeignKey(Platform, on_delete=models.PROTECT, related_name='game_versions')
-
-    class Meta:
-        db_table = "game_versions"
-
-    def __str__(self):
-        return f'{self.game}, {self.platform}'
+# class GameVersion(models.Model):
+#     game = models.ForeignKey(Game, on_delete=models.PROTECT, related_name='game_versions')
+#     platform = models.ForeignKey(Platform, on_delete=models.PROTECT, related_name='game_versions')
+#
+#     class Meta:
+#         db_table = "game_versions"
+#
+#     def __str__(self):
+#         return f'{self.game}, {self.platform}'
 
 
 class Thread(models.Model):
@@ -95,7 +112,7 @@ class Thread(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     closed = models.BooleanField(default=False)
-    comments = models.ManyToManyField(User, on_delete=models.PROTECT, related_name='threads', through='Comment')
+    comments = models.ManyToManyField(User, related_name='threads', through='Comment')
 
     class Meta:
         db_table = "threads"
