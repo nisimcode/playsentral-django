@@ -84,6 +84,7 @@ class Game(models.Model):
     threads = models.ManyToManyField(User, related_name='games', through='Thread')
     # series = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
     release_year = models.PositiveIntegerField(validators=[MinValue(1950), MaxValue(date.today().year + 1)])
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "games"
@@ -111,8 +112,13 @@ class Thread(models.Model):
     title = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    closed = models.BooleanField(default=False)
     comments = models.ManyToManyField(User, related_name='threads', through='Comment')
+    is_deleted = models.BooleanField(default=False)
+
+    # # Will look into how to implement is_closed, probably through a simple serializer, starter/superuser only
+    # # Will prevent posting of comments to this thread when True
+
+    # is_closed = models.BooleanField(default=False)
 
     class Meta:
         db_table = "threads"
@@ -127,6 +133,7 @@ class Rating(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='ratings')
     game = models.ForeignKey(Game, on_delete=models.PROTECT, related_name='ratings')
     rating = models.PositiveIntegerField(choices=RATINGS)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "ratings"
@@ -140,6 +147,7 @@ class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='comment_user')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "comments"
