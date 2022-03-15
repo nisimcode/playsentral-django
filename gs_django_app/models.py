@@ -14,7 +14,7 @@ class Company(models.Model):
         return self.name
 
 
-# # Undecided yet about using platforms. If I do, Platform will be a class and have M2M rel. with Game
+# # Undecided yet about using platforms. If I do, Platform will be a model and have M2M rel. with Game
 
 # class Platform(models.Model):
 #     PLATFORMS = (
@@ -33,7 +33,7 @@ class Company(models.Model):
 #         return self.name
 #
 
-# # Genre is at this point a field of Game, may yet change it to a class.
+# # Genre is at this point a single field of Game, may yet change it to two fields or model.
 
 # class Genre(models.Model):
 #     GENRES = (
@@ -54,14 +54,14 @@ class Company(models.Model):
 # # I will have to look into having a foreign key that can have null value,
 # # since not all games belong to a series. Is it ok? Probably will be just fine and be used.
 
-# class Series(models.Model):
-#     name = models.CharField(max_length=128)
-#
-#     class Meta:
-#         db_table = "series"
-#
-#     def __str__(self):
-#         return self.name
+class Series(models.Model):
+    name = models.CharField(max_length=128)
+
+    class Meta:
+        db_table = "series"
+
+    def __str__(self):
+        return self.name
 
 
 class Game(models.Model):
@@ -73,18 +73,22 @@ class Game(models.Model):
     )
 
     name = models.CharField(max_length=128)
+    developer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games_developed')
+    publisher = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games_published')
+    series = models.ForeignKey(Series, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
+    release_year = models.PositiveIntegerField(validators=[MinValue(1950), MaxValue(date.today().year + 1)])
     picture_url = models.CharField(max_length=128)
-    genre = models.CharField(max_length=128, choices=GENRES)
+    ratings = models.ManyToManyField(User, related_name='games_rated', through='Rating')
+    threads = models.ManyToManyField(User, related_name='games_threaded', through='Thread')
+    is_deleted = models.BooleanField(default=False)
+
+    genre_1 = models.CharField(max_length=128, choices=GENRES)
+    genre_2 = models.CharField(max_length=128, choices=GENRES, null=True, blank=True)
+    # OR
     # genre = models.ForeignKey(Genre, on_delete=models.PROTECT, related_name='games')
-    developer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='game_developer')
-    publisher = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='game_publisher')
+
     # platforms = models.ManyToManyField(Platform, on_delete=models.PROTECT, related_name='games',
     #                                    through='GameVersion', null=True, blank=True)
-    ratings = models.ManyToManyField(User, related_name='games', through='Rating')
-    threads = models.ManyToManyField(User, related_name='games', through='Thread')
-    # series = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
-    release_year = models.PositiveIntegerField(validators=[MinValue(1950), MaxValue(date.today().year + 1)])
-    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "games"
@@ -92,8 +96,8 @@ class Game(models.Model):
     def __str__(self):
         return self.name
 
-# # GameVersion class will probably be created when I decide to use a platforms class and thus create
-# # M2M relationship between Game and Platform through this class. Undecided yet.
+# # GameVersion class will probably be created if and when I decide to use a Platform model and
+# # thus create M2M relationship between Game and Platform through this model. Undecided yet.
 
 # class GameVersion(models.Model):
 #     game = models.ForeignKey(Game, on_delete=models.PROTECT, related_name='game_versions')
@@ -106,9 +110,28 @@ class Game(models.Model):
 #         return f'{self.game}, {self.platform}'
 
 
+# # Registered users can rate a game, and remove and change that rating. One instance per user.
+
+class Rating(models.Model):
+    RATINGS = ((1, 1), (2, 2), (3, 3), (4, 4), (5, 5))
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    game = models.ForeignKey(Game, on_delete=models.PROTECT)
+    rating = models.PositiveIntegerField(choices=RATINGS)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "ratings"
+
+    def __str__(self):
+        return f'{self.user}, {self.game}, {self.rating}'
+
+
+# # A registered user can start a discussion thread, which will have comments created under it
+
 class Thread(models.Model):
-    starter = models.ForeignKey(User, on_delete=models.PROTECT, related_name='threads')
-    game = models.ForeignKey(Game, on_delete=models.PROTECT, related_name='threads')
+    starter = models.ForeignKey(User, on_delete=models.PROTECT)
+    game = models.ForeignKey(Game, on_delete=models.PROTECT)
     title = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -127,24 +150,12 @@ class Thread(models.Model):
         return f'{self.starter.username}, {self.game}, {self.created_at}'
 
 
-class Rating(models.Model):
-    RATINGS = ((1, 1), (2, 2), (3, 3), (4, 4), (5, 5))
-
-    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='ratings')
-    game = models.ForeignKey(Game, on_delete=models.PROTECT, related_name='ratings')
-    rating = models.PositiveIntegerField(choices=RATINGS)
-    is_deleted = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = "ratings"
-
-    def __str__(self):
-        return f'{self.user}, {self.game}, {self.rating}'
-
+# # The whole approach to how to handle comments needs to be well planned.
+# # Comments will be created, retrieved and viewed through the thread they belong to.
 
 class Comment(models.Model):
-    thread = models.ForeignKey(Thread, on_delete=models.PROTECT, related_name='comment_thread')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='comment_user')
+    thread = models.ForeignKey(Thread, on_delete=models.PROTECT)
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
