@@ -5,10 +5,11 @@ from django.db import models
 
 
 class Company(models.Model):
-    name = models.CharField(max_length=128)
+    name = models.CharField(max_length=128, unique=True)
 
     class Meta:
         db_table = "companies"
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -53,40 +54,44 @@ class Company(models.Model):
 # # Games related to each other will share series, like FIFA games.
 
 class Series(models.Model):
-    name = models.CharField(max_length=128)
+    name = models.CharField(max_length=128, unique=True)
 
     class Meta:
         db_table = "series"
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
 
 
 class Game(models.Model):
-
     GENRES = (
-        ('action', 'Action'), ('adventure', 'Adventure'), ('fighting', 'Fighting'),
-        ('rpg', 'RPG'), ('racing', 'Racing'), ('shooter', 'Shooter'),
-        ('simulation', 'Simulation'), ('sports', 'Sports'), ('other', 'Other')
+        ('Action', 'Action'), ('Adventure', 'Adventure'), ('Fighting', 'Fighting'),
+        ('Role playing', 'Role playing'), ('Racing', 'Racing'), ('Shooter', 'Shooter'),
+        ('Simulation', 'Simulation'), ('Sports', 'Sports'), ('Stealth', 'Stealth'),
+        ('Other', 'Other')
     )
 
     name = models.CharField(max_length=128)
+    description = models.CharField(max_length=512, default="")
     developer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games_developed')
     publisher = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games_published')
     series = models.ForeignKey(Series, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
     release_year = models.PositiveIntegerField(validators=[MinValue(1950), MaxValue(date.today().year + 1)])
-    picture_url = models.CharField(max_length=128)
+    picture_url = models.CharField(max_length=256)
     ratings = models.ManyToManyField(User, related_name='games_rated', through='Rating')
     threads = models.ManyToManyField(User, related_name='games_threaded', through='Thread')
     is_deleted = models.BooleanField(default=False)
     genre_1 = models.CharField(max_length=128, choices=GENRES)
     genre_2 = models.CharField(max_length=128, choices=GENRES, null=True, blank=True)
+
     # OR
     # genre = models.ManyToManyField(Genre, through='GameGenre')
     # platforms = models.ManyToManyField(Platform, through='PlatformGame')
 
     class Meta:
         db_table = "games"
+        ordering = ("name", 'publisher')
 
     def __str__(self):
         return self.name
@@ -104,7 +109,7 @@ class Game(models.Model):
 #     def __str__(self):
 #         return f'{self.game}, {self.platform}'
 
-# # PlatformGame class will probably be created if and when I decide to use a Platform model and
+# # PlatformGame class will be created if and when I decide to use a Platform model and
 # # thus create M2M relationship between Game and Platform through this model. Undecided yet.
 
 # class PlatformGame(models.Model):
@@ -130,6 +135,7 @@ class Rating(models.Model):
 
     class Meta:
         db_table = "ratings"
+        ordering = ("game", "rating")
 
     def __str__(self):
         return f'{self.user}, {self.game}, {self.rating}'
@@ -140,7 +146,7 @@ class Rating(models.Model):
 class Thread(models.Model):
     starter = models.ForeignKey(User, on_delete=models.PROTECT)
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
-    title = models.CharField(max_length=128)
+    title = models.CharField(max_length=256)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     comments = models.ManyToManyField(User, related_name='threads', through='Comment')
@@ -166,7 +172,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
-    text = models.TextField(max_length=512)
+    text = models.CharField(max_length=256)
 
     class Meta:
         db_table = "comments"
