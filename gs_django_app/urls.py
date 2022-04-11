@@ -8,17 +8,21 @@ from . import views
 # comments link, they will be accessed only through the thread they belong to.
 
 urlpatterns = [
+    path('token/', obtain_auth_token),
+    path('signup/', views.signup),
     path("users/current", views.current_user),
     path("games/", views.games),
     path("games/<int:pk>/details", views.game_details),
-    path("games/<int:pk>/threads", views.game_threads),
+    path("games/<int:pk>/posts", views.game_posts),
+    path("games/<int:pk>/ratings", views.game_ratings),
+    # path("posts/", views.posts),
+    path("posts/<int:pk>", views.post_details),
     # path("ratings/", views.ratings),
-    # path("ratings/<int:pk>", views.rating_details),
-    path("threads/", views.threads),
+    path("ratings/<int:pk>", views.rating_details),
+    # path("posts/", views.posts),
     # path("threads/<int:pk>", views.thread_details),
     # path("comments/", views.comments),
     # path("comments/<int:pk>", views.comment_details),
-    path('token/', obtain_auth_token),
-    path('signup/', views.signup)
+
 
 ]

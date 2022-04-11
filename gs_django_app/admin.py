@@ -4,7 +4,7 @@ from .models import *
 
 
 admin.site.register(Rating)
-admin.site.register(Thread)
+admin.site.register(Post)
 admin.site.register(Comment)
 
 

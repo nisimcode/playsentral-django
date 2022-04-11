@@ -80,7 +80,7 @@ class Game(models.Model):
     release_year = models.PositiveIntegerField(validators=[MinValue(1950), MaxValue(date.today().year + 1)])
     picture_url = models.CharField(max_length=256)
     ratings = models.ManyToManyField(User, related_name='games_rated', through='Rating')
-    threads = models.ManyToManyField(User, related_name='games_threaded', through='Thread')
+    posts = models.ManyToManyField(User, related_name='games_posted', through='Post')
     is_deleted = models.BooleanField(default=False)
     genre_1 = models.CharField(max_length=128, choices=GENRES)
     genre_2 = models.CharField(max_length=128, choices=GENRES, null=True, blank=True)
@@ -130,52 +130,54 @@ class Rating(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
-    rating = models.PositiveIntegerField(choices=RATINGS)
+    # score = models.PositiveIntegerField(choices=RATINGS)
+    score = models.PositiveIntegerField(validators=[MinValue(1), MaxValue(10)])
+
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "ratings"
-        ordering = ("game", "rating")
+        ordering = ("game", "score")
 
     def __str__(self):
-        return f'{self.user}, {self.game}, {self.rating}'
+        return f'{self.user}, {self.game}, {self.score}'
 
 
-# # A registered user can start a discussion thread, which will have comments created under it
+# # A registered user can start a discussion post, which will have comments created under it
 
-class Thread(models.Model):
-    starter = models.ForeignKey(User, on_delete=models.PROTECT)
+class Post(models.Model):
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
-    title = models.CharField(max_length=256)
+    text = models.CharField(max_length=256)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    comments = models.ManyToManyField(User, related_name='threads', through='Comment')
+    comments = models.ManyToManyField(User, related_name='posts', through='Comment')
     is_deleted = models.BooleanField(default=False)
-    is_closed = models.BooleanField(default=False)
+    # is_closed = models.BooleanField(default=False)
 
     # # Will look into how to implement is_closed, probably through a simple serializer, starter/superuser only
-    # # Will prevent posting of comments to this thread when True
+    # # Will prevent posting of comments to this post when True
 
     class Meta:
-        db_table = "threads"
+        db_table = "posts"
 
     def __str__(self):
-        return f'{self.starter.username}, {self.game}, {self.created_at}'
+        return f'{self.user.username}, {self.game}, {self.created_at}'
 
 
 # # The whole approach to how to handle comments needs to be well planned.
-# # Comments will be created, retrieved and viewed through the thread they belong to.
+# # Comments will be created, retrieved and viewed through the post they belong to.
 
 class Comment(models.Model):
-    thread = models.ForeignKey(Thread, on_delete=models.PROTECT)
+    post = models.ForeignKey(Post, on_delete=models.PROTECT)
+    text = models.CharField(max_length=256)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
-    text = models.CharField(max_length=256)
 
     class Meta:
         db_table = "comments"
 
     def __str__(self):
-        return f'{self.user}, {self.thread.game}, {self.thread.title}'
+        return f'{self.user.username}, {self.post.game}, {self.post.text}'

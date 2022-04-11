@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from gs_django_app.models import Game, Thread, Comment, Rating
+from gs_django_app.models import Game, Post, Comment, Rating
 
 # # Initial serializers, some are likely to change and be more specific.
 
@@ -19,9 +19,9 @@ class RatingSerializer(serializers.ModelSerializer):
         depth = 3
 
 
-class ThreadSerializer(serializers.ModelSerializer):
+class PostSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Thread
+        model = Post
         fields = '__all__'
         depth = 3
 
