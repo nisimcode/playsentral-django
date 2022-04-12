@@ -22,11 +22,7 @@ from gs_django_app.serializers import GameSerializer, RatingSerializer, CommentS
 @permission_classes([IsAuthenticated])
 def current_user(request):
     if request.method == 'GET':
-        data = {
-            "first_name": request.user.first_name,
-            "last_name": request.user.last_name
-        }
-        return Response(data)
+        return Response(request.user.username)
 
     if request.method == 'PUT':
         user = User.objects.get(pk=request.user.id)
@@ -96,7 +92,7 @@ def game_details(request, pk):
         def get_genre():
             return f"{game.genre_1}-{game.genre_2}" if game.genre_2 else game.genre_1
 
-        game_data = {
+        ret_data = {
             "id": game.id,
             "name": game.name,
             "publisher": game.publisher.name,
@@ -107,7 +103,7 @@ def game_details(request, pk):
             "genre": get_genre(),
             # "avg_rating": get_avg_rating()
         }
-        return Response(game_data)
+        return Response(ret_data)
 
     # # Other method/s will require superuser credentials
 
@@ -123,6 +119,7 @@ def game_details(request, pk):
 
     elif request.method == 'DELETE':
         game.is_deleted = True
+        game.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -221,7 +218,7 @@ def game_posts(request, pk):
                  'user': post.user.username,
                  'game': post.game.name,
                  'text': post.text})
-        return Response(post_list)
+        return Response(post_list, status=status.HTTP_200_OK)
 
     elif request.method == 'POST':
         if not request.user.is_authenticated:
