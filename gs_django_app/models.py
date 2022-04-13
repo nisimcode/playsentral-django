@@ -126,7 +126,7 @@ class Game(models.Model):
 # # Registered users can rate a game, and remove and change that rating. One instance per user.
 
 class Rating(models.Model):
-    RATINGS = ((1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9), (10, 10))
+    # RATINGS = ((1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (8, 8), (9, 9), (10, 10))
 
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
