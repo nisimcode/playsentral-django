@@ -158,6 +158,7 @@ def game_ratings(request, pk):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
+
         if not request.data['rating'].isdigit():
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
