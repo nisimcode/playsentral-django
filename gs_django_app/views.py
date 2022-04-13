@@ -214,9 +214,9 @@ def game_posts(request, pk):
         post_list = []
         for post in posts:
             post_list.append(
-                {'id': post.id,
-                 'user': post.user.username,
-                 'game': post.game.name,
+                {'post_id': post.id,
+                 'username': post.user.username,
+                 'game_id': pk,
                  'text': post.text})
         return Response(post_list, status=status.HTTP_200_OK)
 
