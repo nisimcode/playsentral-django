@@ -22,8 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-*fs^3r#34b9_yc!ltu*i-ax%8ty56u3pi6jxa54repse41dsv8'
-with open('/secret/secret_key.txt') as f:
+# OLD SECRET_KEY = 'django-insecure-*fs^3r#34b9_yc!ltu*i-ax%8ty56u3pi6jxa54repse41dsv8'
+# SECRET_KEY = 'django-insecure-o9rssnv+lmuege&b-#uj(q)1d_o8xc4(brvp_u9=p$)wnmoaxf'
+with open('../secret/secret_key.txt') as f:
     SECRET_KEY = f.read().strip()
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -82,13 +83,6 @@ WSGI_APPLICATION = 'gs_django.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 DATABASES = {
     'default': {
@@ -154,7 +148,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://playsentral-react.herokuapp.com/"
+    # "https://playsentral-react.herokuapp.com/"
 ]
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/
@@ -166,5 +160,4 @@ db_from_env = dj_database_url.config(conn_max_age=500)
 DATABASES['default'].update(db_from_env)
 
 # Configure Django App for Heroku.
-
 django_heroku.settings(locals())
