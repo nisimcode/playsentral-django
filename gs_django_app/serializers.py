@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from gs_django_app.models import Game, Post, Comment, Rating
+from gs_django_app.models import Game, Post, Comment, Rating, PostResponse
+
 
 # # Initial serializers, some are likely to change and be more specific.
 
@@ -24,6 +25,13 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = '__all__'
         depth = 3
+
+
+class ResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostResponse
+        fields = '__all__'
+        depth = 2
 
 
 class CommentSerializer(serializers.ModelSerializer):

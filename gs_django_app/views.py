@@ -1,3 +1,5 @@
+import json
+
 from django.db.models import Avg
 from django.shortcuts import render
 from rest_framework import status
@@ -6,15 +8,24 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
+import requests
 
-
-from gs_django_app.models import Game, Rating, Post, Comment, Company, Series
+from gs_django_app.models import Game, Rating, Post, Comment, Company, Series, PostResponse
 from gs_django_app.serializers import GameSerializer, RatingSerializer, CommentSerializer, \
-    UserSerializer, PostSerializer
+    UserSerializer, PostSerializer, ResponseSerializer
+
+JOKES_API_URL = 'https://v2.jokeapi.dev/joke/Any?safe-mode'
 
 
 # # For all relevant views, I may yet choose to allow superusers to get a list of
 # # all instances but other users to get only a list of instances with is_deleted=False
+
+
+@api_view(['GET'])
+def jokes(request):
+    response = requests.get(JOKES_API_URL)
+    jokeData = json.loads(response.content)
+    return Response(jokeData)
 
 
 @api_view(['GET', 'PUT'])
@@ -22,7 +33,11 @@ from gs_django_app.serializers import GameSerializer, RatingSerializer, CommentS
 @permission_classes([IsAuthenticated])
 def current_user(request):
     if request.method == 'GET':
-        return Response(request.user.username)
+        data = {
+            'username': request.user.username,
+            'userId': request.user.id
+        }
+        return Response(data)
 
     if request.method == 'PUT':
         user = User.objects.get(pk=request.user.id)
@@ -33,8 +48,12 @@ def current_user(request):
 @api_view(['GET', 'POST'])
 def games(request):
     if request.method == 'GET':
-        all_objects = Game.objects.filter(is_deleted=False)
-        serializer = GameSerializer(all_objects, many=True)
+        game_objects = Game.objects.filter(is_deleted=False)
+
+        if 'searchValue' in request.GET and request.GET['searchValue']:
+            game_objects = game_objects.filter(name__icontains=request.GET['searchValue'])
+
+        serializer = GameSerializer(game_objects, many=True)
         return Response(serializer.data)
 
     # # Other method/s will require superuser credentials
@@ -50,32 +69,6 @@ def games(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# @api_view(['GET', 'POST'])
-# def game_posts(request, pk):
-#     if request.method == 'GET':
-#         post_objs = Post.objects.filter(is_deleted=False, game=pk)
-#         posts_list = []
-#         for post in post_objs:
-#             posts_list.append(
-#                 {'id': post.id,
-#                  'starter': post.starter.username,
-#                  'game': post.game.name,
-#                  'title': post.title})
-#         return Response(posts_list)
-#
-#     # # Other method/s will require superuser credentials
-#
-#     elif not request.user.is_superuser:
-#         return Response(status=status.HTTP_401_UNAUTHORIZED)
-#
-#     elif request.method == 'POST':
-#         serializer = GameSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET', 'PUT', 'DELETE'])
 @authentication_classes([BasicAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -86,8 +79,6 @@ def game_details(request, pk):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        # def get_avg_rating():
-        #     return Rating.objects.filter(game=pk).aggregate(Avg('score')).get('score__avg')
 
         def get_genre():
             return f"{game.genre_1}-{game.genre_2}" if game.genre_2 else game.genre_1
@@ -101,7 +92,6 @@ def game_details(request, pk):
             "release_year": game.release_year,
             "picture_url": game.picture_url,
             "genre": get_genre(),
-            # "avg_rating": get_avg_rating()
         }
         return Response(ret_data)
 
@@ -126,18 +116,18 @@ def game_details(request, pk):
 @api_view(['GET', 'POST'])
 def game_ratings(request, pk):
     if request.method == 'GET':
-        game_ratings = Rating.objects.filter(game_id=pk)
+        ratings = Rating.objects.filter(game_id=pk)
 
         def get_avg_rating():
-            avg = game_ratings.aggregate(Avg('score')).get('score__avg')
+            avg = ratings.aggregate(Avg('score')).get('score__avg')
             if avg:
-                return game_ratings.aggregate(Avg('score')).get('score__avg')
+                return ratings.aggregate(Avg('score')).get('score__avg')
             else:
                 return 0
 
         def get_user_rating():
-            ratings = game_ratings.filter(user_id=request.user.id)
-            if len(ratings) == 1:
+            user_ratings = ratings.filter(user_id=request.user.id)
+            if len(user_ratings) == 1:
                 return ratings.get(user_id=request.user.id)
             # if len(ratings) > 1:
             #    pass
@@ -145,6 +135,7 @@ def game_ratings(request, pk):
         avg_rating = get_avg_rating()
         user_rating_score = get_user_rating().score if get_user_rating() else 0
         user_rating_id = get_user_rating().id if get_user_rating() else 0
+
         ret_data = {
             'avg_rating': avg_rating,
             'user_rating_score': user_rating_score,
@@ -157,7 +148,6 @@ def game_ratings(request, pk):
     elif request.method == 'POST':
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-
 
         if not request.data['rating'].isdigit():
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -214,11 +204,29 @@ def game_posts(request, pk):
         posts = Post.objects.filter(is_deleted=False, game_id=pk)
         post_list = []
         for post in posts:
+            post_responses = PostResponse.objects.filter(post_id=post.id)
+
+            def get_user_response():
+                try:
+                    user_post_response = post_responses.get(user_id=request.user.id)
+                except PostResponse.DoesNotExist:
+                    return ''
+                return user_post_response.response
+
+            # print('Post responses: ', post_responses)
+            # user_post_response = post_responses.filter(user_id=request.user.id)
+            # print('User post response: ', user_post_response)
+
             post_list.append(
-                {'post_id': post.id,
-                 'username': post.user.username,
-                 'game_id': pk,
-                 'text': post.text})
+                {
+                    'post_id': post.id,
+                    'username': post.user.username,
+                    'user_response': get_user_response(),
+                    'likes': post_responses.filter(response='like').count(),
+                    'dislikes': post_responses.filter(response='dislike').count(),
+                    'text': post.text
+                }
+            )
         return Response(post_list, status=status.HTTP_200_OK)
 
     elif request.method == 'POST':
@@ -230,25 +238,9 @@ def game_posts(request, pk):
             game_id=request.data['game'],
             text=request.data['text'])
         return Response(status=status.HTTP_201_CREATED)
-    # if request.method == 'GET':
-    #     all_objects = Post.objects.filter(is_deleted=False)
-    #     serializer = PostSerializer(all_objects, many=True)
-    #     return Response(serializer.data)
-    #
-    # # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
-    #
-    # elif not request.user.is_authenticated:
-    #     return Response(status=status.HTTP_401_UNAUTHORIZED)
-    #
-    # elif request.method == 'POST':
-    #     serializer = PostSerializer(data=request.data)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @authentication_classes([BasicAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def post_details(request, pk):
@@ -268,16 +260,11 @@ def post_details(request, pk):
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     elif request.method == 'PUT':
-        post.text = request.data['text']
-        post.game_id = request.data['game']
-        post.user_id = request.user.id
-        post.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-        # serializer = PostSerializer(post, data=request.data)
-        # if serializer.is_valid():
-        #     serializer.save()
-        #     return Response(serializer.data)
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         post.is_deleted = True
@@ -286,10 +273,11 @@ def post_details(request, pk):
 
 
 @api_view(['GET', 'POST'])
-def comments(request):
+def post_responses(request):
+    responses = PostResponse.objects.filter(is_deleted=False)
+
     if request.method == 'GET':
-        all_objects = Comment.objects.filter(is_deleted=False)
-        serializer = CommentSerializer(all_objects, many=True)
+        serializer = ResponseSerializer(responses, many=True)
         print(serializer.data)
         return Response(serializer.data)
 
@@ -299,39 +287,93 @@ def comments(request):
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     elif request.method == 'POST':
-        serializer = CommentSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        game_responses = responses.filter(post__game__id=request.data['game'], user_id=request.user.id)
+        for game_response in game_responses:
+            if game_response.post_id == request.data['post']:
+                game_response.response = request.data['response']
+                game_response.save()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if Post.objects.filter(id=request.data['post']) and request.data['response']:
+            PostResponse.objects.create(
+                user_id=request.user.id,
+                response=request.data['response'],
+                post_id=request.data['post']
+            )
+            return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-def comment_details(request, pk):
+def response_edit(request, pk):
     try:
-        instance = Comment.objects.get(pk=pk)
-    except Comment.DoesNotExist:
+        response = PostResponse.objects.get(pk=pk)
+    except Post.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = CommentSerializer(instance)
+        serializer = ResponseSerializer(response)
         return Response(serializer.data)
 
-    # # Other method/s will require for the user to be the original user or superuser.
-
-    elif (not request.user.is_superuser) and (request.user != instance.user):
-        return Response(status=status.HTTP_401_UNAUTHORIZED)
+    elif request.method == 'DELETE':
+        response.is_deleted = True
+        response.save()
 
     elif request.method == 'PUT':
-        serializer = CommentSerializer(instance, data=request.data)
+        serializer = ResponseSerializer(response, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == 'DELETE':
-        instance.is_deleted = True
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+# @api_view(['GET', 'POST'])
+# def comments(request):
+#     if request.method == 'GET':
+#         all_objects = Comment.objects.filter(is_deleted=False)
+#         serializer = CommentSerializer(all_objects, many=True)
+#         print(serializer.data)
+#         return Response(serializer.data)
+#
+#     # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
+#
+#     elif not request.user.is_authenticated:
+#         return Response(status=status.HTTP_401_UNAUTHORIZED)
+#
+#     elif request.method == 'POST':
+#         serializer = CommentSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# @api_view(['GET', 'PUT', 'DELETE'])
+# def comment_details(request, pk):
+#     try:
+#         instance = Comment.objects.get(pk=pk)
+#     except Comment.DoesNotExist:
+#         return Response(status=status.HTTP_404_NOT_FOUND)
+#
+#     if request.method == 'GET':
+#         serializer = CommentSerializer(instance)
+#         return Response(serializer.data)
+#
+#     # # Other method/s will require for the user to be the original user or superuser.
+#
+#     elif (not request.user.is_superuser) and (request.user != instance.user):
+#         return Response(status=status.HTTP_401_UNAUTHORIZED)
+#
+#     elif request.method == 'PUT':
+#         serializer = CommentSerializer(instance, data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     elif request.method == 'DELETE':
+#         instance.is_deleted = True
+#         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -343,5 +385,3 @@ def signup(request):
         email=request.data['email'],
         password=request.data['password'])
     return Response(status=status.HTTP_201_CREATED)
-
-
