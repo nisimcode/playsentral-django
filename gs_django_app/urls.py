@@ -20,6 +20,8 @@ urlpatterns = [
     path("responses/<int:pk>", views.response_edit),
     # path("posts/", views.posts),
     path("posts/<int:pk>", views.post_details),
+    path("posts/<int:pk>/comments", views.post_comments),
+
     # path("ratings/", views.ratings),
     path("ratings/<int:pk>", views.rating_details),
     # path("posts/", views.posts),

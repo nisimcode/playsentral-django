@@ -327,25 +327,37 @@ def response_edit(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# @api_view(['GET', 'POST'])
-# def comments(request):
-#     if request.method == 'GET':
-#         all_objects = Comment.objects.filter(is_deleted=False)
-#         serializer = CommentSerializer(all_objects, many=True)
-#         print(serializer.data)
-#         return Response(serializer.data)
-#
-#     # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
-#
-#     elif not request.user.is_authenticated:
-#         return Response(status=status.HTTP_401_UNAUTHORIZED)
-#
-#     elif request.method == 'POST':
-#         serializer = CommentSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['GET', 'POST'])
+def post_comments(request, pk):
+    # if request.method == 'GET':
+    # comments = Comment.objects.filter(is_deleted=False, post_id=post_id)
+    # serializer = CommentSerializer(comments, many=True)
+    # return Response(serializer.data, status=status.HTTP_200_OK)
+
+    if request.method == 'GET':
+        comments = Comment.objects.filter(is_deleted=False, post_id=pk)
+        comment_list = []
+        for comment in comments:
+            comment_list.append(
+                {
+                    'comment_id': comment.id,
+                    'username': comment.user.username,
+                    'text': comment.text
+                }
+            )
+        return Response(comment_list, status=status.HTTP_200_OK)
+
+    # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
+
+    # elif not request.user.is_authenticated:
+    #     return Response(status=status.HTTP_401_UNAUTHORIZED)
+    #
+    # elif request.method == 'POST':
+    #     serializer = CommentSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # @api_view(['GET', 'PUT', 'DELETE'])

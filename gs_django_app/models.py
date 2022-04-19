@@ -129,4 +129,4 @@ class Comment(models.Model):
         db_table = "comments"
 
     def __str__(self):
-        return f'{self.user.username}, {self.post.game}, {self.post.text}'
+        return self.text
