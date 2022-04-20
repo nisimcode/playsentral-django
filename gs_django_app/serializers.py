@@ -5,7 +5,6 @@ from gs_django_app.models import Game, Post, Comment, Rating, PostResponse
 
 # # Initial serializers, some are likely to change and be more specific.
 
-
 class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
