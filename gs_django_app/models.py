@@ -2,9 +2,19 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator as MinValue, MaxValueValidator as MaxValue
 from django.db import models
+from gs_django_app.etc import GAME_GENRES
 
 
-class Company(models.Model):
+class BaseModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+
+
+class Company(BaseModel):
     name = models.CharField(max_length=128, unique=True)
 
     class Meta:
@@ -15,7 +25,7 @@ class Company(models.Model):
         return self.name
 
 
-class Series(models.Model):
+class Series(BaseModel):
     name = models.CharField(max_length=128, unique=True)
 
     class Meta:
@@ -26,16 +36,9 @@ class Series(models.Model):
         return self.name
 
 
-class Game(models.Model):
-    GENRES = (
-        ('Action', 'Action'), ('Adventure', 'Adventure'), ('Fighting', 'Fighting'),
-        ('Role playing', 'Role playing'), ('Racing', 'Racing'), ('Shooter', 'Shooter'),
-        ('Simulation', 'Simulation'), ('Sports', 'Sports'), ('Stealth', 'Stealth'),
-        ('Other', 'Other')
-    )
-
+class Game(BaseModel):
     name = models.CharField(max_length=128)
-    description = models.CharField(max_length=512, default="")
+    description = models.CharField(max_length=512)
     developer = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games_developed')
     publisher = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='games_published')
     series = models.ForeignKey(Series, on_delete=models.PROTECT, related_name='games', null=True, blank=True)
@@ -43,90 +46,80 @@ class Game(models.Model):
     picture_url = models.CharField(max_length=256)
     ratings = models.ManyToManyField(User, related_name='games_rated', through='Rating')
     posts = models.ManyToManyField(User, related_name='games_posted', through='Post')
-    is_deleted = models.BooleanField(default=False)
-    genre_1 = models.CharField(max_length=128, choices=GENRES)
-    genre_2 = models.CharField(max_length=128, choices=GENRES, null=True, blank=True)
+    genre_1 = models.CharField(max_length=128, choices=GAME_GENRES)
+    genre_2 = models.CharField(max_length=128, choices=GAME_GENRES, null=True, blank=True)
 
     class Meta:
         db_table = "games"
-        ordering = ("name", 'publisher')
+        ordering = ("name", "release_year")
 
     def __str__(self):
         return self.name
 
-# # Registered users can rate a game, and remove and change that rating. One instance per user.
 
-
-class Rating(models.Model):
+class Rating(BaseModel):
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
     score = models.PositiveIntegerField(validators=[MinValue(1), MaxValue(10)])
-    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "ratings"
         ordering = ("game", "score")
 
     def __str__(self):
-        return f'{self.user}, {self.game}, {self.score}'
-
-# # A registered user can start a discussion post, which will have comments created under it
+        return self.score
 
 
-class Post(models.Model):
+class Post(BaseModel):
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
     text = models.CharField(max_length=256)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_deleted = models.BooleanField(default=False)
-    responses = models.ManyToManyField(User, related_name='posts_liked', through='PostResponse')
+    responses = models.ManyToManyField(User, related_name='posts_responded', through='PostResponse')
     comments = models.ManyToManyField(User, related_name='posts_commented', through='Comment')
-
-    # is_closed = models.BooleanField(default=False)
-
-    # # Will look into how to implement is_closed, probably through a simple serializer, starter/superuser only
-    # # Will prevent posting of comments to this post when True
 
     class Meta:
         db_table = "posts"
-        ordering = ("created_at",)
+        ordering = ("created_at", "text")
 
     def __str__(self):
-        return f'{self.user.username}, {self.game}, {self.created_at}'
+        return self.text
 
 
-class PostResponse(models.Model):
-    RESPONSES = (('like', 'like'), ('dislike', 'dislike'))
+class Comment(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    post = models.ForeignKey(Post, on_delete=models.PROTECT)
+    text = models.CharField(max_length=256)
+    responses = models.ManyToManyField(User, related_name='comments_responded', through='CommentResponse')
 
-    response = models.CharField(choices=RESPONSES, max_length=16)
+    class Meta:
+        db_table = "comments"
+        ordering = ("created_at", "text")
+
+    def __str__(self):
+        return self.text
+
+
+class PostResponse(BaseModel):
+    response = models.CharField(choices=(('like', 'like'), ('dislike', 'dislike')), max_length=16)
     post = models.ForeignKey(Post, on_delete=models.PROTECT)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         db_table = "post_responses"
-        ordering = ('response', 'user', 'created_at')
+        ordering = ("created_at", "response")
 
     def __str__(self):
         return self.response
 
 
-# # The whole approach to how to handle comments needs to be well planned.
-# # Comments will be created, retrieved and viewed through the post they belong to.
-
-
-class Comment(models.Model):
-    post = models.ForeignKey(Post, on_delete=models.PROTECT)
-    text = models.CharField(max_length=256)
+class CommentResponse(BaseModel):
+    response = models.CharField(choices=(('like', 'like'), ('dislike', 'dislike')), max_length=16)
+    comment = models.ForeignKey(Comment, on_delete=models.PROTECT)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_deleted = models.BooleanField(default=False)
 
     class Meta:
-        db_table = "comments"
+        db_table = "comment_responses"
+        ordering = ("created_at", "response")
 
     def __str__(self):
-        return self.text
+        return self.response

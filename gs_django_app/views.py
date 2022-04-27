@@ -1,7 +1,7 @@
 import json
 
 from django.db.models import Avg
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -10,15 +10,9 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 import requests
 
+from gs_django_app.etc import JOKES_API_URL
 from gs_django_app.models import Game, Rating, Post, Comment, Company, Series, PostResponse
-from gs_django_app.serializers import GameSerializer, RatingSerializer, CommentSerializer, \
-    UserSerializer, PostSerializer, ResponseSerializer
-
-JOKES_API_URL = 'https://v2.jokeapi.dev/joke/Any?safe-mode'
-
-
-# # For all relevant views, I may yet choose to allow superusers to get a list of
-# # all instances but other users to get only a list of instances with is_deleted=False
+from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer, ResponseSerializer
 
 
 @api_view(['GET'])
@@ -53,6 +47,13 @@ def games(request):
         if 'searchValue' in request.GET and request.GET['searchValue']:
             game_objects = game_objects.filter(name__icontains=request.GET['searchValue'])
 
+        if 'sort' in request.GET:
+            if 'desc' in request.GET['sort']:
+                sort_order = '-'
+            else:
+                sort_order = ''
+            game_objects = game_objects.order_by(sort_order + 'name')
+
         serializer = GameSerializer(game_objects, many=True)
         return Response(serializer.data)
 
@@ -66,7 +67,7 @@ def games(request):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
@@ -79,21 +80,23 @@ def game_details(request, pk):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-
         def get_genre():
             return f"{game.genre_1}-{game.genre_2}" if game.genre_2 else game.genre_1
 
-        ret_data = {
+        def get_series():
+            return game.series.name if game.series else ""
+
+        game_data = {
             "id": game.id,
             "name": game.name,
             "publisher": game.publisher.name,
             "developer": game.developer.name,
-            "series": game.series.name if game.series else "",
+            "series": get_series(),
             "release_year": game.release_year,
             "picture_url": game.picture_url,
             "genre": get_genre(),
         }
-        return Response(ret_data)
+        return Response(game_data)
 
     # # Other method/s will require superuser credentials
 
@@ -116,12 +119,12 @@ def game_details(request, pk):
 @api_view(['GET', 'POST'])
 def game_ratings(request, pk):
     if request.method == 'GET':
-        ratings = Rating.objects.filter(game_id=pk)
+        ratings = Rating.objects.filter(game_id=pk, is_deleted=False)
 
         def get_avg_rating():
             avg = ratings.aggregate(Avg('score')).get('score__avg')
             if avg:
-                return ratings.aggregate(Avg('score')).get('score__avg')
+                return avg
             else:
                 return 0
 
@@ -129,19 +132,15 @@ def game_ratings(request, pk):
             user_ratings = ratings.filter(user_id=request.user.id)
             if len(user_ratings) == 1:
                 return ratings.get(user_id=request.user.id)
-            # if len(ratings) > 1:
-            #    pass
+            else:
+                return user_ratings.latest('updated_at')
 
-        avg_rating = get_avg_rating()
-        user_rating_score = get_user_rating().score if get_user_rating() else 0
-        user_rating_id = get_user_rating().id if get_user_rating() else 0
-
-        ret_data = {
-            'avg_rating': avg_rating,
-            'user_rating_score': user_rating_score,
-            'user_rating_id': user_rating_id
+        rating_data = {
+            'avg_rating': get_avg_rating(),
+            'user_rating_score': get_user_rating().score if get_user_rating() else 0,
+            'user_rating_id': get_user_rating().id if get_user_rating() else 0
         }
-        return Response(ret_data)
+        return Response(rating_data)
 
     # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
 
@@ -349,15 +348,15 @@ def post_comments(request, pk):
 
     # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
 
-    # elif not request.user.is_authenticated:
-    #     return Response(status=status.HTTP_401_UNAUTHORIZED)
-    #
-    # elif request.method == 'POST':
-    #     serializer = CommentSerializer(data=request.data)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'POST':
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+
+        Comment.objects.create(
+            user_id=request.user.id,
+            post_id=request.data['post'],
+            text=request.data['text'])
+        return Response(status=status.HTTP_201_CREATED)
 
 
 # @api_view(['GET', 'PUT', 'DELETE'])

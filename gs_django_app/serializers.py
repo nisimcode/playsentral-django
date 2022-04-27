@@ -3,8 +3,6 @@ from django.contrib.auth.models import User
 from gs_django_app.models import Game, Post, Comment, Rating, PostResponse
 
 
-# # Initial serializers, some are likely to change and be more specific.
-
 class GameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Game
@@ -40,15 +38,15 @@ class CommentSerializer(serializers.ModelSerializer):
         depth = 2
 
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username', 'password', 'first_name', 'last_name']
-
-    def create(self, validated_data):
-        password = validated_data.pop('password')
-        instance = super().create(validated_data)
-        instance.user.set_password(password)
-
-        instance.user.save()
-        return instance
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['username', 'password', 'first_name', 'last_name']
+#
+#     def create(self, validated_data):
+#         password = validated_data.pop('password')
+#         instance = super().create(validated_data)
+#         instance.user.set_password(password)
+#
+#         instance.user.save()
+#         return instance
