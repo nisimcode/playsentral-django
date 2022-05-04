@@ -4,8 +4,6 @@ from rest_framework.authtoken.views import obtain_auth_token
 
 from . import views
 
-# Initial URLS, subject to many changes. For example, most likely no use for
-# comments link, they will be accessed only through the thread they belong to.
 
 urlpatterns = [
     path('token/', obtain_auth_token),
