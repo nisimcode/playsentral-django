@@ -30,7 +30,7 @@ DEBUG = False
 
 # ALLOWED_HOSTS = ['127.0.0.1']
 
-ALLOWED_HOSTS = ['playsentral-django.herokuapp.com']
+ALLOWED_HOSTS = ['playsentral-django.herokuapp.com', '127.0.0.1']
 
 # Application definition
 
