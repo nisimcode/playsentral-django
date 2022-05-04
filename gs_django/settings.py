@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS = ['127.0.0.1']
 
@@ -154,7 +154,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://playsentral-react.herokuapp.com",
-    "http://playsentral-react.herokuapp.com"
 ]
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/
