@@ -130,7 +130,7 @@ USE_TZ = True
 
 # The absolute path to the directory where collectstatic will collect static files for deployment.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# The URL to use when referring to static files (where they will be served from
+# The URL to use when referring to static files (where they will be served from)
 
 STATIC_URL = '/static/'
 
@@ -153,7 +153,8 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://playsentral-react.herokuapp.com"
+    "https://playsentral-react.herokuapp.com",
+    "http://playsentral-react.herokuapp.com"
 ]
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/

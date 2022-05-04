@@ -1,3 +1,3 @@
 release: python manage.py migrate
-web: gunicorn gs_django.wsgi --log-file -
+web: gunicorn gs_django_proj.wsgi --log-file -
 
