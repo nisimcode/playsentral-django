@@ -30,7 +30,7 @@ DEBUG = False
 
 # ALLOWED_HOSTS = ['127.0.0.1']
 
-ALLOWED_HOSTS = ['127.0.0.1', '.herokuapp.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'https://playsentral-django.herokuapp.com/']
 
 # Application definition
 
@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'gs_django_app.apps.GsDjangoAppConfig',
-
 ]
 
 MIDDLEWARE = [
@@ -164,6 +163,6 @@ db_from_env = dj_database_url.config(conn_max_age=500)
 DATABASES['default'].update(db_from_env)
 
 # Configure Django App for Heroku.
-django_heroku.settings(locals())
+# django_heroku.settings(locals())
 
 
