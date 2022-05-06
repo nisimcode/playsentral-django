@@ -13,7 +13,6 @@ import os
 from pathlib import Path
 import dj_database_url
 import django_heroku
-import environ
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,16 +23,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
-environ.Env.read_env()
 # SECRET_KEY = '1v&-j(h6kw=2d+xv1zc6hqy2$6l!r%dnphckzb7!^psk2x44ia'
-SECRET_KEY = os.environ.get('secret_key')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-# ALLOWED_HOSTS = ['127.0.0.1']
-
-ALLOWED_HOSTS = ['playsentral-django.herokuapp.com', '127.0.0.1']
+ALLOWED_HOSTS = ['playsentral-back.herokuapp.com', '127.0.0.1']
 
 # Application definition
 
