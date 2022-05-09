@@ -1,4 +1,4 @@
-JOKES_API_URL = 'https://v2.jokeapi.dev/joke/Any?safe-mode'
+# JOKES_API_URL = 'https://v2.jokeapi.dev/joke/Any?safe-mode'
 
 GAME_GENRES = (
         ('Action', 'Action'),

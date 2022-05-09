@@ -11,12 +11,12 @@ from gs_django_app.etc import JOKES_API_URL
 from gs_django_app.models import Game, Rating, Post, Comment, Company, Series, PostResponse
 from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer, ResponseSerializer
 
-
-@api_view(['GET'])
-def jokes(request):
-    response = requests.get(JOKES_API_URL)
-    jokeData = json.loads(response.content)
-    return Response(jokeData)
+#
+# @api_view(['GET'])
+# def jokes(request):
+#     response = requests.get(JOKES_API_URL)
+#     jokeData = json.loads(response.content)
+#     return Response(jokeData)
 
 
 @api_view(['GET', 'PUT'])
