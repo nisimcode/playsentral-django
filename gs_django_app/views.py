@@ -1,15 +1,12 @@
 import json
-
+import requests
 from django.db.models import Avg
-from django.shortcuts import render, get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-import requests
-
 from gs_django_app.etc import JOKES_API_URL
 from gs_django_app.models import Game, Rating, Post, Comment, Company, Series, PostResponse
 from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer, ResponseSerializer
@@ -122,9 +119,10 @@ def game_ratings(request, pk):
         ratings = Rating.objects.filter(game_id=pk, is_deleted=False)
 
         def get_avg_rating():
-            avg = ratings.aggregate(Avg('score')).get('score__avg')
-            if avg:
-                return avg
+            if ratings:
+                avg = ratings.aggregate(Avg('score')).get('score__avg')
+                if avg:
+                    return avg
             else:
                 return 0
 
@@ -183,11 +181,7 @@ def rating_details(request, pk):
         rating.user_id = request.user.id
         rating.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
-        # serializer = RatingSerializer(rating_obj, data=request.data)
-        # if serializer.is_valid():
-        #     serializer.save()
-        #     return Response(serializer.data)
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     elif request.method == 'DELETE':
         rating.is_deleted = True
@@ -211,10 +205,6 @@ def game_posts(request, pk):
                 except PostResponse.DoesNotExist:
                     return ''
                 return user_post_response.response
-
-            # print('Post responses: ', post_responses)
-            # user_post_response = post_responses.filter(user_id=request.user.id)
-            # print('User post response: ', user_post_response)
 
             post_list.append(
                 {
@@ -328,11 +318,6 @@ def response_edit(request, pk):
 
 @api_view(['GET', 'POST'])
 def post_comments(request, pk):
-    # if request.method == 'GET':
-    # comments = Comment.objects.filter(is_deleted=False, post_id=post_id)
-    # serializer = CommentSerializer(comments, many=True)
-    # return Response(serializer.data, status=status.HTTP_200_OK)
-
     if request.method == 'GET':
         comments = Comment.objects.filter(is_deleted=False, post_id=pk)
         comment_list = []
