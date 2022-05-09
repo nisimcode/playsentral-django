@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from gs_django_app.etc import JOKES_API_URL
+# from gs_django_app.etc import JOKES_API_URL
 from gs_django_app.models import Game, Rating, Post, Comment, Company, Series, PostResponse
 from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer, ResponseSerializer
 
@@ -119,7 +119,7 @@ def game_ratings(request, pk):
         ratings = Rating.objects.filter(game_id=pk, is_deleted=False)
 
         def get_avg_rating():
-            if ratings:
+            if len(ratings):
                 avg = ratings.aggregate(Avg('score')).get('score__avg')
                 if avg:
                     return avg
