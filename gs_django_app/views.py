@@ -1,5 +1,3 @@
-import json
-import requests
 from django.db.models import Avg
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
@@ -7,16 +5,19 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-# from gs_django_app.etc import JOKES_API_URL
-from gs_django_app.models import Game, Rating, Post, Comment, Company, Series, PostResponse
+from gs_django_app.models import Game, Rating, Post, PostResponse
 from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer, ResponseSerializer
 
-#
-# @api_view(['GET'])
-# def jokes(request):
-#     response = requests.get(JOKES_API_URL)
-#     jokeData = json.loads(response.content)
-#     return Response(jokeData)
+
+@api_view(['POST'])
+def signup(request):
+    User.objects.create_user(
+        username=request.data['username'],
+        first_name=request.data['first_name'],
+        last_name=request.data['last_name'],
+        email=request.data['email'],
+        password=request.data['password'])
+    return Response(status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'PUT'])
@@ -54,17 +55,15 @@ def games(request):
         serializer = GameSerializer(game_objects, many=True)
         return Response(serializer.data)
 
-    # # Other method/s will require superuser credentials
-
-    elif not request.user.is_superuser:
-        return Response(status=status.HTTP_401_UNAUTHORIZED)
-
-    elif request.method == 'POST':
-        serializer = GameSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # elif not request.user.is_superuser:
+    #     return Response(status=status.HTTP_401_UNAUTHORIZED)
+    #
+    # elif request.method == 'POST':
+    #     serializer = GameSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
@@ -95,8 +94,6 @@ def game_details(request, pk):
         }
         return Response(game_data)
 
-    # # Other method/s will require superuser credentials
-
     elif not request.user.is_superuser:
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -119,7 +116,7 @@ def game_ratings(request, pk):
         ratings = Rating.objects.filter(game_id=pk, is_deleted=False)
 
         def get_avg_rating():
-            if len(ratings):
+            if ratings:
                 avg = ratings.aggregate(Avg('score')).get('score__avg')
                 if avg:
                     return avg
@@ -139,8 +136,6 @@ def game_ratings(request, pk):
             'user_rating_id': get_user_rating().id if get_user_rating() else 0
         }
         return Response(rating_data)
-
-    # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
 
     elif request.method == 'POST':
         if not request.user.is_authenticated:
@@ -170,8 +165,6 @@ def rating_details(request, pk):
         serializer = RatingSerializer(rating)
         return Response(serializer.data)
 
-    # # Other method/s will require for the user to be the original user.
-
     elif (not request.user.is_superuser) and (request.user != rating.user):
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -181,7 +174,6 @@ def rating_details(request, pk):
         rating.user_id = request.user.id
         rating.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
     elif request.method == 'DELETE':
         rating.is_deleted = True
@@ -197,11 +189,11 @@ def game_posts(request, pk):
         posts = Post.objects.filter(is_deleted=False, game_id=pk)
         post_list = []
         for post in posts:
-            post_responses = PostResponse.objects.filter(post_id=post.id)
+            responses = PostResponse.objects.filter(post_id=post.id)
 
             def get_user_response():
                 try:
-                    user_post_response = post_responses.get(user_id=request.user.id)
+                    user_post_response = responses.get(user_id=request.user.id)
                 except PostResponse.DoesNotExist:
                     return ''
                 return user_post_response.response
@@ -211,8 +203,8 @@ def game_posts(request, pk):
                     'post_id': post.id,
                     'username': post.user.username,
                     'user_response': get_user_response(),
-                    'likes': post_responses.filter(response='like').count(),
-                    'dislikes': post_responses.filter(response='dislike').count(),
+                    'likes': responses.filter(response='like').count(),
+                    'dislikes': responses.filter(response='dislike').count(),
                     'text': post.text
                 }
             )
@@ -243,8 +235,6 @@ def post_details(request, pk):
         serializer = PostSerializer(post)
         return Response(serializer.data)
 
-    # # Other method/s will require for the user to be the original user or superuser.
-
     elif (not request.user.is_superuser) and (request.user != post.user):
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -270,8 +260,6 @@ def post_responses(request):
         print(serializer.data)
         return Response(serializer.data)
 
-    # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
-
     elif not request.user.is_authenticated:
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -294,7 +282,7 @@ def post_responses(request):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-def response_edit(request, pk):
+def response_details(request, pk):
     try:
         response = PostResponse.objects.get(pk=pk)
     except Post.DoesNotExist:
@@ -316,32 +304,32 @@ def response_edit(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET', 'POST'])
-def post_comments(request, pk):
-    if request.method == 'GET':
-        comments = Comment.objects.filter(is_deleted=False, post_id=pk)
-        comment_list = []
-        for comment in comments:
-            comment_list.append(
-                {
-                    'comment_id': comment.id,
-                    'username': comment.user.username,
-                    'text': comment.text
-                }
-            )
-        return Response(comment_list, status=status.HTTP_200_OK)
-
-    # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
-
-    elif request.method == 'POST':
-        if not request.user.is_authenticated:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-
-        Comment.objects.create(
-            user_id=request.user.id,
-            post_id=request.data['post'],
-            text=request.data['text'])
-        return Response(status=status.HTTP_201_CREATED)
+# @api_view(['GET', 'POST'])
+# def post_comments(request, pk):
+#     if request.method == 'GET':
+#         comments = Comment.objects.filter(is_deleted=False, post_id=pk)
+#         comment_list = []
+#         for comment in comments:
+#             comment_list.append(
+#                 {
+#                     'comment_id': comment.id,
+#                     'username': comment.user.username,
+#                     'text': comment.text
+#                 }
+#             )
+#         return Response(comment_list, status=status.HTTP_200_OK)
+#
+#     # # Other method/s will require for the user to be a registered user (or superuser, who is a reg. user)
+#
+#     elif request.method == 'POST':
+#         if not request.user.is_authenticated:
+#             return Response(status=status.HTTP_401_UNAUTHORIZED)
+#
+#         Comment.objects.create(
+#             user_id=request.user.id,
+#             post_id=request.data['post'],
+#             text=request.data['text'])
+#         return Response(status=status.HTTP_201_CREATED)
 
 
 # @api_view(['GET', 'PUT', 'DELETE'])
@@ -371,13 +359,9 @@ def post_comments(request, pk):
 #         instance.is_deleted = True
 #         return Response(status=status.HTTP_204_NO_CONTENT)
 
+# @api_view(['GET'])
+# def jokes(request):
+#     response = requests.get('https://v2.jokeapi.dev/joke/Any?safe-mode')
+#     jokeData = json.loads(response.content)
+#     return Response(jokeData)
 
-@api_view(['POST'])
-def signup(request):
-    User.objects.create_user(
-        username=request.data['username'],
-        first_name=request.data['first_name'],
-        last_name=request.data['last_name'],
-        email=request.data['email'],
-        password=request.data['password'])
-    return Response(status=status.HTTP_201_CREATED)
