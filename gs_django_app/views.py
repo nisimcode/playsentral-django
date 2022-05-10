@@ -116,22 +116,24 @@ def game_ratings(request, pk):
         ratings = Rating.objects.filter(game_id=pk, is_deleted=False)
 
         def get_avg_rating():
-            if ratings:
-                avg = ratings.aggregate(Avg('score')).get('score__avg')
-                if avg:
-                    return avg
+            if not ratings:
+                return 0
+            return ratings.aggregate(Avg('score')).get('score__avg')
 
         def get_user_rating():
+            if not ratings:
+                return 0, 0
             user_ratings = ratings.filter(user_id=request.user.id)
+            if not user_ratings:
+                return 0, 0
             if len(user_ratings) == 1:
-                return ratings.get(user_id=request.user.id)
-            else:
-                return user_ratings.latest('updated_at')
+                return ratings.get(user_id=request.user.id).score, ratings.get(user_id=request.user.id).id
+            return user_ratings.latest('updated_at').score, user_ratings.latest('updated_at').id
 
         rating_data = {
-            'avg_rating': get_avg_rating() if get_avg_rating() else 0,
-            'user_rating_score': get_user_rating().score if get_user_rating() else 0,
-            'user_rating_id': get_user_rating().id if get_user_rating() else 0
+            'avg_rating': get_avg_rating(),
+            'user_rating_score': get_user_rating()[0],
+            'user_rating_id': get_user_rating()[1]
         }
         return Response(rating_data)
 
@@ -249,57 +251,26 @@ def post_details(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 def post_responses(request):
-    responses = PostResponse.objects.filter(is_deleted=False)
-
-    if request.method == 'GET':
-        serializer = ResponseSerializer(responses, many=True)
-        print(serializer.data)
-        return Response(serializer.data)
-
-    elif not request.user.is_authenticated:
+    if not request.user.is_authenticated:
         return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-    elif request.method == 'POST':
-        game_responses = responses.filter(post__game__id=request.data['game'], user_id=request.user.id)
-        for game_response in game_responses:
-            if game_response.post_id == request.data['post']:
-                game_response.response = request.data['response']
-                game_response.save()
-                return Response(status=status.HTTP_204_NO_CONTENT)
+    user_responses = PostResponse.objects.filter(
+        is_deleted=False, post_id=request.data['post'], user_id=request.user.id)
 
-        if Post.objects.filter(id=request.data['post']) and request.data['response']:
-            PostResponse.objects.create(
-                user_id=request.user.id,
-                response=request.data['response'],
-                post_id=request.data['post']
-            )
-            return Response(status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    if len(user_responses):
+        user_response = user_responses[0].response
+        user_responses.delete()
+        if user_response == request.data['response']:
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-@api_view(['GET', 'PUT', 'DELETE'])
-def response_details(request, pk):
-    try:
-        response = PostResponse.objects.get(pk=pk)
-    except Post.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        serializer = ResponseSerializer(response)
-        return Response(serializer.data)
-
-    elif request.method == 'DELETE':
-        response.is_deleted = True
-        response.save()
-
-    elif request.method == 'PUT':
-        serializer = ResponseSerializer(response, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    PostResponse.objects.create(
+        user_id=request.user.id,
+        response=request.data['response'],
+        post_id=request.data['post']
+    )
+    return Response(status=status.HTTP_201_CREATED)
 
 
 # @api_view(['GET', 'POST'])
