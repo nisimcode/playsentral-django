@@ -45,8 +45,8 @@ def games(request):
         if 'searchValue' in request.GET and request.GET['searchValue']:
             game_objects = game_objects.filter(name__icontains=request.GET['searchValue'])
 
-        if 'sort' in request.GET:
-            if 'desc' in request.GET['sort']:
+        if 'sortValue' in request.GET:
+            if request.GET['sortValue'] == 'desc':
                 sort_order = '-'
             else:
                 sort_order = ''
