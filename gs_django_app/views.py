@@ -120,8 +120,6 @@ def game_ratings(request, pk):
                 avg = ratings.aggregate(Avg('score')).get('score__avg')
                 if avg:
                     return avg
-            else:
-                return 0
 
         def get_user_rating():
             user_ratings = ratings.filter(user_id=request.user.id)
@@ -131,7 +129,7 @@ def game_ratings(request, pk):
                 return user_ratings.latest('updated_at')
 
         rating_data = {
-            'avg_rating': get_avg_rating(),
+            'avg_rating': get_avg_rating() if get_avg_rating() else 0,
             'user_rating_score': get_user_rating().score if get_user_rating() else 0,
             'user_rating_id': get_user_rating().id if get_user_rating() else 0
         }
