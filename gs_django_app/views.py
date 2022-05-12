@@ -1,3 +1,6 @@
+import json
+from pprint import pprint
+
 from django.db.models import Avg
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
@@ -277,17 +280,13 @@ def post_responses(request):
 
 @api_view(['POST'])
 def notes(request):
-    spam_flag = False
-    if (" " not in request.data['text']) or (len(request.data['text'] <= 3)):
-        spam_flag = True
-
     Note.objects.create(
-        user_id=request.user.id if request.user.is_authenticated else "",
-        details=request.data['details'],
+        user_id=request.data['user'],
+        info=request.data['info'],
         text=request.data['text'],
-        spam=spam_flag
+        spam=(len(set(request.data['text'])) == 1) or (len(request.data['text']) < 4)
     )
-
+    return Response(status=status.HTTP_201_CREATED)
 
 
     # serializer = NoteSerializer(data=request.data)

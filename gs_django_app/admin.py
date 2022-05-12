@@ -33,6 +33,11 @@ class SeriesAdmin(admin.ModelAdmin):
     list_filter = ['name']
 
 
+@admin.register(Note)
+class NoteAdmin(admin.ModelAdmin):
+    list_filter = ['created_at']
+
+
 # @admin.register(Comment)
 # class CommentAdmin(admin.ModelAdmin):
 #     list_filter = ['created_at']

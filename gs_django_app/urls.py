@@ -14,6 +14,7 @@ urlpatterns = [
     path("responses/", views.post_responses),
     path("posts/<int:pk>", views.post_details),
     path("ratings/<int:pk>", views.rating_details),
+    path("notes/", views.notes)
 
 
 

@@ -99,9 +99,9 @@ class PostResponse(BaseModel):
 
 class Note(BaseModel):
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
-    details = models.CharField(max_length=256)
+    info = models.CharField(max_length=256)
     text = models.CharField(max_length=256)
-    spam = models.BinaryField()
+    spam = models.BooleanField()
 
     class Meta:
         db_table = "notes"
