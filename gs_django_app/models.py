@@ -75,24 +75,9 @@ class Post(BaseModel):
     game = models.ForeignKey(Game, on_delete=models.PROTECT)
     text = models.CharField(max_length=256)
     responses = models.ManyToManyField(User, related_name='posts_responded', through='PostResponse')
-    comments = models.ManyToManyField(User, related_name='posts_commented', through='Comment')
 
     class Meta:
         db_table = "posts"
-        ordering = ("created_at", "text")
-
-    def __str__(self):
-        return self.text
-
-
-class Comment(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.PROTECT)
-    post = models.ForeignKey(Post, on_delete=models.PROTECT)
-    text = models.CharField(max_length=256)
-    responses = models.ManyToManyField(User, related_name='comments_responded', through='CommentResponse')
-
-    class Meta:
-        db_table = "comments"
         ordering = ("created_at", "text")
 
     def __str__(self):
@@ -112,14 +97,41 @@ class PostResponse(BaseModel):
         return self.response
 
 
-class CommentResponse(BaseModel):
-    response = models.CharField(choices=(('like', 'like'), ('dislike', 'dislike')), max_length=16)
-    comment = models.ForeignKey(Comment, on_delete=models.PROTECT)
-    user = models.ForeignKey(User, on_delete=models.PROTECT)
+class Note(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
+    details = models.CharField(max_length=256)
+    text = models.CharField(max_length=256)
+    spam = models.BinaryField()
 
     class Meta:
-        db_table = "comment_responses"
-        ordering = ("created_at", "response")
+        db_table = "notes"
+        ordering = ("created_at",)
 
     def __str__(self):
-        return self.response
+        return self.text
+
+# class CommentResponse(BaseModel):
+#     response = models.CharField(choices=(('like', 'like'), ('dislike', 'dislike')), max_length=16)
+#     comment = models.ForeignKey(Comment, on_delete=models.PROTECT)
+#     user = models.ForeignKey(User, on_delete=models.PROTECT)
+#
+#     class Meta:
+#         db_table = "comment_responses"
+#         ordering = ("created_at", "response")
+#
+#     def __str__(self):
+#         return self.response
+
+
+# class Comment(BaseModel):
+#     user = models.ForeignKey(User, on_delete=models.PROTECT)
+#     post = models.ForeignKey(Post, on_delete=models.PROTECT)
+#     text = models.CharField(max_length=256)
+#     responses = models.ManyToManyField(User, related_name='comments_responded', through='CommentResponse')
+#
+#     class Meta:
+#         db_table = "comments"
+#         ordering = ("created_at", "text")
+#
+#     def __str__(self):
+#         return self.text

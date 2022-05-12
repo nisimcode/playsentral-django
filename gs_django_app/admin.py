@@ -3,18 +3,8 @@ from django.contrib import admin
 from .models import *
 
 
-@admin.register(CommentResponse)
-class CommentResponseAdmin(admin.ModelAdmin):
-    list_filter = ['created_at']
-
-
 @admin.register(PostResponse)
 class PostResponseAdmin(admin.ModelAdmin):
-    list_filter = ['created_at']
-
-
-@admin.register(Comment)
-class CommentAdmin(admin.ModelAdmin):
     list_filter = ['created_at']
 
 
@@ -41,3 +31,12 @@ class CompanyAdmin(admin.ModelAdmin):
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
     list_filter = ['name']
+
+
+# @admin.register(Comment)
+# class CommentAdmin(admin.ModelAdmin):
+#     list_filter = ['created_at']
+
+# @admin.register(CommentResponse)
+# class CommentResponseAdmin(admin.ModelAdmin):
+#     list_filter = ['created_at']

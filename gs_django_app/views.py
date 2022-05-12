@@ -5,8 +5,8 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from gs_django_app.models import Game, Rating, Post, PostResponse
-from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer, ResponseSerializer
+from gs_django_app.models import Game, Rating, Post, PostResponse, Note
+from gs_django_app.serializers import GameSerializer, RatingSerializer, PostSerializer
 
 
 @api_view(['POST'])
@@ -35,6 +35,8 @@ def current_user(request):
         user = User.objects.get(pk=request.user.id)
         user['first_name'] = request.data.first_name
         user['last_name'] = request.data.last_name
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', 'POST'])
@@ -271,6 +273,30 @@ def post_responses(request):
         post_id=request.data['post']
     )
     return Response(status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def notes(request):
+    spam_flag = False
+    if (" " not in request.data['text']) or (len(request.data['text'] <= 3)):
+        spam_flag = True
+
+    Note.objects.create(
+        user_id=request.user.id if request.user.is_authenticated else "",
+        details=request.data['details'],
+        text=request.data['text'],
+        spam=spam_flag
+    )
+
+
+
+    # serializer = NoteSerializer(data=request.data)
+    # if serializer.is_valid():
+    #     if spam_flag:
+    #         serializer.spam = True
+    #     serializer.save()
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED)
+    # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # @api_view(['GET', 'POST'])
