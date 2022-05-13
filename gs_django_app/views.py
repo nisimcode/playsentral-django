@@ -1,6 +1,3 @@
-import json
-from pprint import pprint
-
 from django.db.models import Avg
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication, TokenAuthentication
@@ -282,7 +279,7 @@ def post_responses(request):
 def notes(request):
     Note.objects.create(
         user_id=request.data['user'],
-        info=request.data['info'],
+        info=request.data['info'] if len(request.data['info']) else "",
         text=request.data['text'],
         spam=(len(set(request.data['text'])) == 1) or (len(request.data['text']) < 4)
     )
