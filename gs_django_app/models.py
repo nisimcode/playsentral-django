@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator as MinValue, MaxValueValidator as MaxValue
 from django.db import models
 from gs_django_app.etc import GAME_GENRES
+from django.db.models import Avg
 
 
 class BaseModel(models.Model):
@@ -56,6 +57,10 @@ class Game(BaseModel):
     def __str__(self):
         return self.name
 
+    @property
+    def avg_rating(self):
+        return Rating.objects.filter(game_id=self.id, is_deleted=False).aggregate(Avg('score')).get('score__avg')
+
 
 class Rating(BaseModel):
     user = models.ForeignKey(User, on_delete=models.PROTECT)
@@ -95,6 +100,7 @@ class PostResponse(BaseModel):
 
     def __str__(self):
         return self.response
+
 
 
 class Note(BaseModel):

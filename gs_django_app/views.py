@@ -84,8 +84,12 @@ def game_details(request, pk):
         def get_series():
             return game.series.name if game.series else ""
 
+        # def get_rating():
+        #     return game.avg_rating if game.avg_rating else 'N/A'
+
         game_data = {
             "id": game.id,
+            # "rating": get_rating(),
             "name": game.name,
             "publisher": game.publisher.name,
             "developer": game.developer.name,
@@ -94,6 +98,7 @@ def game_details(request, pk):
             "picture_url": game.picture_url,
             "genre": get_genre(),
         }
+        print(game_data)
         return Response(game_data)
 
     elif not request.user.is_superuser:
